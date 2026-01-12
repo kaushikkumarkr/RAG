@@ -69,17 +69,17 @@ The Agent will:
 
 ```mermaid
 graph TD
-    User[User / UI] -->|Query| Agent[Agent Runner (ReAct)]
-    Agent -->|Validation| Guard[Input Guardrails]
-    Agent -->|Decompose| LLM[Local LLM (MLX)]
-    Agent -->|Tool Call| Search[Search Tool]
+    User["User / UI"] -->|Query| Agent["Agent Runner (ReAct)"]
+    Agent -->|Validation| Guard["Input Guardrails"]
+    Agent -->|Decompose| LLM["Local LLM (MLX)"]
+    Agent -->|Tool Call| Search["Search Tool"]
     
     subgraph Retrieval Pipeline
-        Search --> Hybrid{Hybrid Search}
-        Hybrid -->|Dense| Qdrant[(Qdrant Vector DB)]
-        Hybrid -->|Sparse| BM25[BM25 Index]
+        Search --> Hybrid{"Hybrid Search"}
+        Hybrid -->|Dense| Qdrant[("Qdrant Vector DB")]
+        Hybrid -->|Sparse| BM25["BM25 Index"]
         Qdrant & BM25 --> Candidates
-        Candidates --> Rerank[Cross-Encoder Reranker]
+        Candidates --> Rerank["Cross-Encoder Reranker"]
     end
     
     Rerank -->|Top K| Agent
