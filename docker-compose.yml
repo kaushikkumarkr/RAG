@@ -1,0 +1,65 @@
+version: '3.8'
+
+services:
+  # The RAG API Service
+  api:
+    build: .
+    container_name: rag-foundry-api
+    ports:
+      - "8000:8000"
+    depends_on:
+      - qdrant
+      - phoenix
+    environment:
+      - QDRANT_URL=http://qdrant:6333
+      - PHOENIX_COLLECTOR_ENDPOINT=http://phoenix:4317
+      # Point to host MLX Server
+      - LLM_BASE_URL=http://host.docker.internal:8080/v1
+      - ENV=development
+    volumes:
+      - .:/app
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+
+  # Vector Database
+  qdrant:
+    image: qdrant/qdrant:latest
+    container_name: rag-foundry-qdrant
+    ports:
+      - "6333:6333"
+      - "6334:6334"
+    volumes:
+      - qdrant_data:/qdrant/storage
+    restart: always
+
+  # Observability & Eval UI
+  phoenix:
+    image: arizephoenix/phoenix:latest
+    container_name: rag-foundry-phoenix
+    ports:
+      - "6006:6006" # UI
+      - "4317:4317" # OTel gRPC
+      - "4318:4318" # OTel HTTP
+    environment:
+      - PHOENIX_PORT=6006
+      - PHOENIX_GRPC_PORT=4317
+
+  ui:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: rag-foundry-ui
+    command: streamlit run apps/ui/app.py --server.port 8501 --server.address 0.0.0.0
+    ports:
+      - "8501:8501"
+    environment:
+      - API_URL=http://api:8000
+    depends_on:
+      - api
+    volumes:
+      - .:/app
+    networks:
+      - default
+
+volumes:
+  qdrant_data:

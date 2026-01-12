@@ -1,0 +1,42 @@
+[project]
+name = "rag-foundry"
+version = "0.1.0"
+description = "Local-first Advanced RAG Platform"
+authors = [{name = "Antigravity", email = "bot@example.com"}]
+requires-python = ">=3.10"
+dependencies = [
+    "fastapi>=0.109.0",
+    "uvicorn>=0.27.0",
+    "pydantic>=2.6.0",
+    "pydantic-settings>=2.2.0",
+    "qdrant-client>=1.7.0",
+    "sentence-transformers>=2.3.0",
+    "rank-bm25>=0.2.2",
+    "langgraph>=0.0.10",
+    "langchain>=0.1.0",
+    "langchain-community>=0.0.10",
+    "arize-phoenix>=3.0.0",
+    "opentelemetry-api>=1.20.0",
+    "opentelemetry-sdk>=1.20.0",
+    "opentelemetry-exporter-otlp>=1.20.0",
+    "opentelemetry-instrumentation-fastapi>=0.40.0",
+    "python-multipart>=0.0.6",
+    "httpx>=0.26.0",
+    "ragas>=0.0.22"
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=8.0.0",
+    "ruff>=0.2.0",
+    "mypy>=1.8.0",
+    "black>=24.0.0"
+]
+
+[tool.ruff]
+line-length = 88
+target-version = "py310"
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"

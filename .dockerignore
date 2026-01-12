@@ -1,0 +1,9 @@
+.venv/
+.git/
+__pycache__/
+*.pyc
+.DS_Store
+qdrant_data/
+eval/
+sample_data/
+scripts/
