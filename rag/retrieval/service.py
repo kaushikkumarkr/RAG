@@ -24,7 +24,8 @@ class RetrievalService:
                         If provided, creates a child span. Otherwise, creates standalone trace.
         """
         # Create span (nested or standalone)
-        if observation:
+        is_span = observation is not None
+        if is_span:
             span = observation.span(name="dense_search", input={"query": query, "top_k": top_k})
         else:
             span = langfuse.trace(name="dense_search", input={"query": query, "top_k": top_k})
@@ -48,10 +49,16 @@ class RetrievalService:
                     metadata=payload
                 ))
             
-            span.end(output={"num_results": len(scored_chunks)})
+            if is_span:
+                span.end(output={"num_results": len(scored_chunks)})
+            else:
+                span.update(output={"num_results": len(scored_chunks)})
             return scored_chunks
         except Exception as e:
-            span.end(output={"error": str(e)})
+            if is_span:
+                span.end(output={"error": str(e)})
+            else:
+                span.update(output={"error": str(e)})
             raise
 
     def hybrid_search(self, query: str, top_k: int = 5, alpha: float = 0.5, observation=None) -> List[ScoredChunk]:
@@ -63,7 +70,8 @@ class RetrievalService:
             observation: Optional Langfuse observation to nest under.
         """
         # Create span (nested or standalone)
-        if observation:
+        is_span = observation is not None
+        if is_span:
             span = observation.span(name="hybrid_search", input={"query": query, "top_k": top_k, "alpha": alpha})
         else:
             span = langfuse.trace(name="hybrid_search", input={"query": query, "top_k": top_k, "alpha": alpha})
@@ -141,8 +149,14 @@ class RetrievalService:
                         metadata=chunk.metadata
                     ))
             
-            span.end(output={"num_results": len(final_results)})
+            if is_span:
+                span.end(output={"num_results": len(final_results)})
+            else:
+                span.update(output={"num_results": len(final_results)})
             return final_results
         except Exception as e:
-            span.end(output={"error": str(e)})
+            if is_span:
+                span.end(output={"error": str(e)})
+            else:
+                span.update(output={"error": str(e)})
             raise

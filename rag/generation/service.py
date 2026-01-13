@@ -43,7 +43,8 @@ class GenerationService:
                         If provided, creates a child span. Otherwise, creates standalone trace.
         """
         # Create span (nested or standalone)
-        if observation:
+        is_span = observation is not None
+        if is_span:
             span = observation.span(
                 name="generation",
                 input={"query": query, "num_chunks": len(chunks)}
@@ -60,8 +61,15 @@ class GenerationService:
             
             answer = self.llm_service.generate_completion(system_prompt, user_message)
             
-            span.end(output={"answer": answer[:200] + "..." if len(answer) > 200 else answer})
+            if is_span:
+                span.end(output={"answer": answer[:200] + "..." if len(answer) > 200 else answer})
+            else:
+                span.update(output={"answer": answer[:200] + "..." if len(answer) > 200 else answer})
             return answer
         except Exception as e:
-            span.end(output={"error": str(e)})
+            if is_span:
+                span.end(output={"error": str(e)})
+            else:
+                span.update(output={"error": str(e)})
             raise
+

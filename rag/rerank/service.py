@@ -26,7 +26,8 @@ class RerankerService:
             return []
         
         # Create span (nested or standalone)
-        if observation:
+        is_span = observation is not None
+        if is_span:
             span = observation.span(
                 name="rerank",
                 input={"query": query, "num_chunks": len(chunks), "top_k": top_k}
@@ -51,8 +52,15 @@ class RerankerService:
             sorted_chunks = sorted(chunks, key=lambda x: x.score, reverse=True)
             result = sorted_chunks[:top_k]
             
-            span.end(output={"num_results": len(result), "top_score": result[0].score if result else 0})
+            if is_span:
+                span.end(output={"num_results": len(result), "top_score": result[0].score if result else 0})
+            else:
+                span.update(output={"num_results": len(result), "top_score": result[0].score if result else 0})
             return result
         except Exception as e:
-            span.end(output={"error": str(e)})
+            if is_span:
+                span.end(output={"error": str(e)})
+            else:
+                span.update(output={"error": str(e)})
             raise
+

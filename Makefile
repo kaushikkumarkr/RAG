@@ -23,9 +23,29 @@ up:
 down:
 	docker compose down
 
-# Run tests
+# Run all tests
 test:
-	$(PYTHON) -m pytest
+	PYTHONPATH=. $(PYTHON) -m pytest tests/ -v
+
+# Run unit tests only
+test-unit:
+	PYTHONPATH=. $(PYTHON) -m pytest tests/unit -v
+
+# Run with coverage
+test-cov:
+	PYTHONPATH=. $(PYTHON) -m pytest tests/ -v --cov=rag --cov-report=term-missing
+
+# Run guardrails test script
+test-guardrails:
+	PYTHONPATH=. $(PYTHON) scripts/test_guardrails.py
+
+# Run citations test script
+test-citations:
+	PYTHONPATH=. $(PYTHON) scripts/test_citations.py
+
+# Run confidence test script  
+test-confidence:
+	PYTHONPATH=. $(PYTHON) scripts/test_confidence.py
 
 # Run linting
 lint:
