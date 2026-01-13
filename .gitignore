@@ -43,6 +43,7 @@ sample_data/
 eval/
 !eval/eval_questions.jsonl
 !eval/thresholds.yaml
+!eval/comparison_dataset.json
 
 # Logs
 *.log

@@ -1,12 +1,12 @@
 from openai import OpenAI
 from apps.api.settings import settings
 import logging
-from openinference.instrumentation.openai import OpenAIInstrumentor
+try:
+    from langfuse.decorators import observe
+except ImportError:
+    from langfuse import observe
 
 logger = logging.getLogger(__name__)
-
-# Instrument OpenAI global
-OpenAIInstrumentor().instrument()
 
 class LLMService:
     def __init__(self):
@@ -16,6 +16,7 @@ class LLMService:
             api_key="lm-studio"  # Usually ignored by local runners
         )
 
+    @observe(as_type="generation")
     def generate_completion(self, system_prompt: str, user_message: str) -> str:
         try:
             response = self.client.chat.completions.create(
@@ -31,6 +32,7 @@ class LLMService:
             logger.error(f"LLM Generation Error: {e}")
             return f"Error generating answer: {e}"
 
+    @observe(as_type="generation")
     def chat(self, messages: list) -> str:
         try:
             response = self.client.chat.completions.create(

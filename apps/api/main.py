@@ -4,7 +4,7 @@ from contextlib import asynccontextmanager
 from apps.api.settings import settings
 from apps.api.routers import ingest, search, ask
 from apps.api.telemetry import setup_telemetry
-from opentelemetry.instrumentation.fastapi import FastAPIInstrumentor
+
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -22,7 +22,7 @@ app = FastAPI(
     lifespan=lifespan
 )
 
-FastAPIInstrumentor.instrument_app(app)
+
 
 app.include_router(ingest.router)
 app.include_router(search.router)

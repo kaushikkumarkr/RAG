@@ -1,19 +1,20 @@
 from typing import List, Dict
 import re
 from rag.generation.llm import LLMService
-from rag.agent.tools import SearchTool
+from rag.agent.tools import SearchTool, CryptoPriceTool
 
 REACT_SYSTEM_PROMPT = """
 You are a smart research assistant.
 You have access to the following tools:
 
-SearchTool: Use this to find facts. Input should be a specific search query.
+1. SearchTool: Use this to find facts from the knowledge base. Input should be a specific search query.
+2. CryptoPriceTool: Use this to get live cryptocurrency prices. Input should be the full name (e.g., bitcoin).
 
 Use the following format:
 
 Question: the input question
 Thought: you should always think about what to do
-Action: the action to take, should be one of [SearchTool]
+Action: the action to take, should be one of [SearchTool, CryptoPriceTool]
 Action Input: the input to the action
 Observation: the result of the action
 ... (this Thought/Action/Action Input/Observation can repeat N times)
@@ -26,7 +27,8 @@ Begin!
 class AgentRunner:
     def __init__(self):
         self.llm = LLMService()
-        self.tool = SearchTool()
+        self.search_tool = SearchTool()
+        self.crypto_tool = CryptoPriceTool()
         self.max_steps = 5
 
     def run(self, query: str) -> str:
@@ -54,7 +56,9 @@ class AgentRunner:
                 # 4. Execute Action
                 observation = "Error: Tool not found."
                 if action == "SearchTool":
-                    observation = self.tool.search(action_input)
+                    observation = self.search_tool.search(action_input)
+                elif action == "CryptoPriceTool":
+                    observation = self.crypto_tool.get_price(action_input)
                 
                 print(f"Observation: {observation[:100]}...")
 

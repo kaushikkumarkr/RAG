@@ -9,10 +9,12 @@ services:
       - "8000:8000"
     depends_on:
       - qdrant
-      - phoenix
+      - langfuse-server
     environment:
       - QDRANT_URL=http://qdrant:6333
-      - PHOENIX_COLLECTOR_ENDPOINT=http://phoenix:4317
+      - LANGFUSE_SECRET_KEY=sk-lf-f44d74b4-83c6-45b0-983e-c1a43ab8b4e9
+      - LANGFUSE_PUBLIC_KEY=pk-lf-f30ceb9a-2a9e-4e85-8a35-fed182994168
+      - LANGFUSE_HOST=http://langfuse-server:3000
       # Point to host MLX Server
       - LLM_BASE_URL=http://host.docker.internal:8080/v1
       - ENV=development
@@ -33,16 +35,44 @@ services:
     restart: always
 
   # Observability & Eval UI
-  phoenix:
-    image: arizephoenix/phoenix:latest
-    container_name: rag-foundry-phoenix
-    ports:
-      - "6006:6006" # UI
-      - "4317:4317" # OTel gRPC
-      - "4318:4318" # OTel HTTP
+  # Langfuse Database (Postgres)
+  langfuse-db:
+    image: postgres:15
+    container_name: rag-foundry-langfuse-db
+    restart: always
     environment:
-      - PHOENIX_PORT=6006
-      - PHOENIX_GRPC_PORT=4317
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=postgres
+      - POSTGRES_DB=postgres
+    ports:
+      - "5432:5432"
+    volumes:
+      - langfuse_db_data:/var/lib/postgresql/data
+
+  # Langfuse Server
+  langfuse-server:
+    image: langfuse/langfuse:2
+    container_name: rag-foundry-langfuse-server
+    depends_on:
+      - langfuse-db
+    ports:
+      - "3000:3000"
+    environment:
+      - DATABASE_URL=postgresql://postgres:postgres@langfuse-db:5432/postgres
+      - NEXTAUTH_URL=http://localhost:3000
+      - NEXTAUTH_SECRET=mysecret
+      - SALT=mysalt
+      - TELEMETRY_ENABLED=false
+      - LANGFUSE_ENABLE_EXPERIMENTAL_FEATURES=true
+      # Auto-provision project
+      - LANGFUSE_INIT_PROJECT_PUBLIC_KEY=pk-lf-1234567890
+      - LANGFUSE_INIT_PROJECT_SECRET_KEY=sk-lf-1234567890
+      - LANGFUSE_INIT_PROJECT_NAME=LocalDev
+      - LANGFUSE_INIT_ORG_ID=org-123
+      - LANGFUSE_INIT_ORG_NAME=MyOrg
+      - LANGFUSE_INIT_USER_EMAIL=admin@example.com
+      - LANGFUSE_INIT_USER_PASSWORD=password
+      - LANGFUSE_INIT_USER_NAME=Admin
 
   ui:
     build:
@@ -63,3 +93,4 @@ services:
 
 volumes:
   qdrant_data:
+  langfuse_db_data:
