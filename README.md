@@ -246,7 +246,10 @@ Visit `http://localhost:3000` to see:
 ├── 📊 confidence_scoring (Span)
 └── 🛡️ output_guardrails (Span)
 ```
-(Langfuse_TracesList.png)
+![Langfuse_TracesList](Langfuse_TracesList.png)
+
+![Langfuse_TraceDetails](Langfuse_TraceDetails.png)
+
 **Scores Per Trace:**
 | Category | Metrics |
 |----------|---------|
