@@ -11,9 +11,9 @@ setup:
 	$(PIP) install --upgrade pip
 	$(PIP) install -r requirements.txt
 
-# Start Infrastructure Services (Qdrant, Phoenix)
+# Start Infrastructure Services (Qdrant, Langfuse)
 services:
-	docker compose up -d qdrant phoenix
+	docker compose up -d qdrant langfuse-db langfuse-server
 
 # Start all services (including API in docker - optional)
 up:
@@ -53,7 +53,7 @@ lint:
 
 # Run API locally (needs Qdrant/Phoenix running via docker)
 run-local:
-	$(UVICORN) apps.api.main:app --reload --port 8000
+	$(UVICORN) apps.api.main:app --reload --port 8000 --env-file .env
 
 # Health check
 health:
@@ -88,5 +88,3 @@ ask:
 
 eval:
 	PYTHONPATH=. .venv/bin/python scripts/run_eval.py
-
-

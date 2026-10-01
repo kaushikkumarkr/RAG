@@ -1,14 +1,14 @@
 # 🏭 RAG Foundry
 
-> **Enterprise-Grade Agentic RAG Platform** with Full Observability, Guardrails, and Quality Metrics
+> Local-first RAG demo with a ReAct agent, retrieval evaluation, and safety checks
 
-![Status](https://img.shields.io/badge/Status-Production_Ready-success)
+![Status](https://img.shields.io/badge/Status-Prototype-blue)
 ![Python](https://img.shields.io/badge/Python-3.11+-blue)
 ![Tests](https://img.shields.io/badge/Tests-21_Passing-brightgreen)
 ![MLX](https://img.shields.io/badge/MLX-Apple_Silicon-green)
 ![Langfuse](https://img.shields.io/badge/Observability-Langfuse-purple)
 
-**RAG Foundry** is a production-ready, local-first framework for building advanced Retrieval Augmented Generation (RAG) systems. It implements **senior-level AI engineering practices** including multi-stage guardrails, citation validation, confidence scoring, and comprehensive observability.
+**RAG Foundry** is a local-first RAG prototype. It combines hybrid retrieval and reranking with a ReAct agent, heuristic guardrails, citation checks, confidence scoring, and an evaluation workflow.
 
 ---
 
@@ -26,12 +26,23 @@
 ### 📊 Full Observability (Langfuse)
 - **Nested Traces**: 7-component pipeline visible as hierarchical spans
 - **15+ Metrics**: Guardrail scores, citation counts, confidence breakdown, Ragas quality
-- **Quality Evaluation**: Ragas faithfulness & answer relevancy on every query
+- **Quality Evaluation**: Ragas faithfulness and answer relevancy in the evaluation script
 
 ### ⚡ Local-First Performance
 - **MLX Optimization**: JIT-compiled inference for Apple Silicon
 - **Quantized Models**: Qwen2.5-7B-4bit at high tokens/sec
-- **Zero Cloud Dependency**: Runs entirely on your local machine
+- **Local Core**: Qdrant, BM25, and the configured LLM run locally; Fetch and the crypto tool use network services
+
+### 🔌 MCP Connectors
+- **Filesystem**: Read files from the dedicated `data/documents` folder
+- **Fetch**: Read public web pages as research context
+- **Git**: Inspect this project's Git history and diffs
+- **Memory**: Persist useful facts in `data/agent_memory.jsonl`
+
+The ReAct agent discovers MCP tools at startup and calls them through the MCP
+Python client. Filesystem and Git access are limited to the project documents
+folder and this repository. The agent exposes only read-oriented filesystem and
+Git tools; memory can add facts but cannot delete them.
 
 ---
 
@@ -118,13 +129,14 @@ flowchart TB
 - Docker & Docker Compose
 - Python 3.11+
 - Apple Silicon Mac (M1/M2/M3/M4) for MLX support
+- Node.js/npm and `uv` (provides `uvx`) for the four MCP servers
 
 ### Installation
 
 ```bash
 # Clone the repository
 git clone https://github.com/kaushikkumarkr/RAG.git
-cd RAG/rag-foundry
+cd RAG
 
 # Setup virtual environment
 make setup
@@ -132,8 +144,32 @@ make setup
 # Start infrastructure (Qdrant, Langfuse)
 make services
 
+# Create your local credentials file
+cp .env.example .env
+
+# On first run, open http://localhost:3000, sign in with the local account
+# shown in docker-compose.yml, create a project, and add its public/secret keys to .env.
+
 # Start MLX inference server
 bash scripts/start_mlx.sh
+
+# Start the API locally so its MCP stdio servers can run on the host
+make run-local
+```
+
+`make run-local` loads Langfuse credentials from the ignored `.env` file. Use
+`.env.example` as the template; the local API keys should stay out of Git.
+
+The MCP packages download on first launch through `npx` and `uvx`; no API keys
+are needed. The agent endpoint is `POST /agent/ask` with `{"question": "..."}`.
+The Streamlit UI currently uses the standard `/ask` endpoint.
+
+Example:
+
+```bash
+curl -X POST http://localhost:8000/agent/ask \
+  -H 'Content-Type: application/json' \
+  -d '{"question":"Summarize the project architecture using the local docs and Git history."}'
 ```
 
 ### Run Professional Evaluation
@@ -143,7 +179,16 @@ bash scripts/start_mlx.sh
 PYTHONPATH=. .venv/bin/python scripts/eval_professional.py
 ```
 
-This will show:
+The script prints the guardrail, retrieval, reranking, citation, confidence, and
+quality metrics for each query. Scores depend on the local model and evaluation
+corpus; they are not fixed project guarantees.
+
+Known limitation: Ragas metric calls against the local MLX server have not yet
+completed reliably on this setup. The RAG and MCP API paths work, but do not
+quote fixed Ragas scores until the evaluation finishes successfully on the
+target machine.
+
+Example output format:
 ```
 🏆 ULTIMATE PROFESSIONAL RAG EVALUATION
 ════════════════════════════════════════
@@ -160,8 +205,8 @@ This will show:
   📊 FINAL RESULTS
   ╔════════════════════════════════════════╗
   ║ Confidence: 0.71 (HIGH)                ║
-  ║ Faithfulness: 1.00 🌟                  ║
-  ║ Relevancy: 0.98 🌟                     ║
+  ║ Faithfulness: <measured at runtime>    ║
+  ║ Relevancy: <measured at runtime>       ║
   ║ Citations: 1 valid, 0 phantom          ║
   ╚════════════════════════════════════════╝
 ```

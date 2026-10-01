@@ -4,8 +4,13 @@ import yaml
 import sys
 import os
 from typing import List, Dict
+from dotenv import load_dotenv
+
+load_dotenv()
+
 from datasets import Dataset
 from ragas import evaluate
+from ragas.run_config import RunConfig
 from ragas.metrics import (
     faithfulness,
     answer_relevancy,
@@ -26,6 +31,7 @@ llm = ChatOpenAI(
     api_key="mlx",
     model="mlx-community/Qwen2.5-7B-Instruct-4bit", 
     temperature=0,
+    max_tokens=1024,
     request_timeout=360
 )
 
@@ -101,7 +107,8 @@ def main():
         dataset=dataset,
         metrics=metrics,
         llm=llm,
-        embeddings=embeddings
+        embeddings=embeddings,
+        run_config=RunConfig(timeout=180, max_retries=1, max_workers=1, log_tenacity=True),
     )
     
     print("\n=== Evaluation Results ===")

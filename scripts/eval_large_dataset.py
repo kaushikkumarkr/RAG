@@ -3,8 +3,15 @@ Professional RAG Evaluation with Guardrails, Nested Traces, and ALL Metrics.
 Following Langfuse best practices for security tracing.
 """
 import asyncio
+from dotenv import load_dotenv
+
+load_dotenv()
+
 from ragas.dataset_schema import SingleTurnSample
 from ragas.metrics import faithfulness, answer_relevancy
+from ragas.llms import LangchainLLMWrapper
+from ragas.embeddings import LangchainEmbeddingsWrapper
+from ragas.run_config import RunConfig
 from langfuse import Langfuse
 from langfuse.decorators import observe
 from langchain_openai import ChatOpenAI
@@ -23,15 +30,17 @@ llm_wrapper = ChatOpenAI(
     base_url="http://localhost:8080/v1",
     api_key="mlx",
     model="mlx-community/Qwen2.5-7B-Instruct-4bit",
-    temperature=0
+    temperature=0,
+    max_tokens=1024,
 )
 embeddings = HuggingFaceEmbeddings(model_name="all-MiniLM-L6-v2")
+ragas_run_config = RunConfig(timeout=180, max_retries=1, max_workers=1, log_tenacity=True)
 
 # Configure Ragas metrics
 metrics = [faithfulness, answer_relevancy]
 for m in metrics:
-    m.llm = llm_wrapper
-    m.embeddings = embeddings
+    m.llm = LangchainLLMWrapper(llm_wrapper, run_config=ragas_run_config)
+    m.embeddings = LangchainEmbeddingsWrapper(embeddings, run_config=ragas_run_config)
 
 # Services
 retriever = RetrievalService()
@@ -59,7 +68,7 @@ async def score_with_ragas(query: str, chunks: list, answer: str) -> dict:
             score = await m.single_turn_ascore(sample)
             scores[m.name] = round(float(score), 2)
         except Exception as e:
-            scores[m.name] = 0.0
+            raise RuntimeError(f"Ragas {m.name} scoring failed") from e
     return scores
 
 async def eval_pipeline():

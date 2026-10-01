@@ -1,5 +1,5 @@
 from fastapi import APIRouter, HTTPException
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 from typing import List, Optional, Dict, Any
 from rag.retrieval.service import RetrievalService
 from rag.rerank.service import RerankerService
@@ -12,6 +12,8 @@ class AskRequest(BaseModel):
     question: str
     filters: Optional[Dict[str, Any]] = None
     use_hybrid: bool = True
+    top_k: int = Field(default=5, ge=1, le=20)
+    alpha: float = Field(default=0.5, ge=0.0, le=1.0)
 
 class AskResponse(BaseModel):
     answer: str
@@ -22,18 +24,23 @@ async def ask(request: AskRequest):
     try:
         # 1. Retrieval
         retrieval_service = RetrievalService()
+        candidate_k = min(request.top_k * 4, 80)
         if request.use_hybrid:
             # Fetch more candidates for reranking
-            candidates = retrieval_service.hybrid_search(request.question, top_k=20) 
+            candidates = retrieval_service.hybrid_search(
+                request.question, top_k=candidate_k, alpha=request.alpha
+            )
         else:
-            candidates = retrieval_service.search(request.question, top_k=20)
+            candidates = retrieval_service.search(request.question, top_k=candidate_k)
             
         if not candidates:
             return AskResponse(answer="I found no relevant information in the knowledge base.", citations=[])
 
         # 2. Reranking
         reranker_service = RerankerService()
-        top_chunks = reranker_service.rerank(request.question, candidates, top_k=5)
+        top_chunks = reranker_service.rerank(
+            request.question, candidates, top_k=request.top_k
+        )
         
         # 3. Generation
         generation_service = GenerationService()

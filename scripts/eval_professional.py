@@ -24,8 +24,15 @@ Trace Structure:
 └── Scores: guard_*, faithfulness, answer_relevancy, confidence
 """
 import asyncio
+from dotenv import load_dotenv
+
+load_dotenv()
+
 from ragas.dataset_schema import SingleTurnSample
 from ragas.metrics import faithfulness, answer_relevancy
+from ragas.llms import LangchainLLMWrapper
+from ragas.embeddings import LangchainEmbeddingsWrapper
+from ragas.run_config import RunConfig
 from langfuse import Langfuse
 from langchain_openai import ChatOpenAI
 from langchain_community.embeddings import HuggingFaceEmbeddings
@@ -46,17 +53,19 @@ llm_wrapper = ChatOpenAI(
     base_url="http://localhost:8080/v1",
     api_key="mlx",
     model="mlx-community/Qwen2.5-7B-Instruct-4bit",
-    temperature=0
+    temperature=0,
+    max_tokens=1024,
 )
 embeddings = HuggingFaceEmbeddings(model_name="all-MiniLM-L6-v2")
+ragas_run_config = RunConfig(timeout=180, max_retries=1, max_workers=1, log_tenacity=True)
 
 # Configure Ragas metrics
 faithfulness_metric = faithfulness
 answer_relevancy_metric = answer_relevancy
-faithfulness_metric.llm = llm_wrapper
-faithfulness_metric.embeddings = embeddings
-answer_relevancy_metric.llm = llm_wrapper
-answer_relevancy_metric.embeddings = embeddings
+faithfulness_metric.llm = LangchainLLMWrapper(llm_wrapper, run_config=ragas_run_config)
+faithfulness_metric.embeddings = LangchainEmbeddingsWrapper(embeddings, run_config=ragas_run_config)
+answer_relevancy_metric.llm = LangchainLLMWrapper(llm_wrapper, run_config=ragas_run_config)
+answer_relevancy_metric.embeddings = LangchainEmbeddingsWrapper(embeddings, run_config=ragas_run_config)
 
 # Initialize all services
 retriever = RetrievalService()
@@ -92,7 +101,7 @@ async def calculate_ragas_scores(query: str, contexts: list, answer: str) -> dic
             score = await metric.single_turn_ascore(sample)
             scores[metric.name] = round(float(score), 2)
         except Exception as e:
-            scores[metric.name] = 0.0
+            raise RuntimeError(f"Ragas {metric.name} scoring failed") from e
     return scores
 
 

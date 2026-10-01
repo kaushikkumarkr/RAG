@@ -34,6 +34,9 @@ env/
 .idea/
 *.swp
 .DS_Store
+.env
+.env.*
+!.env.example
 
 # Docker
 qdrant_data/

@@ -78,7 +78,7 @@ if prompt := st.chat_input("Ask a question about your documents..."):
             if response.status_code == 200:
                 data = response.json()
                 answer = data.get("answer", "No answer returned.")
-                context = data.get("context", [])
+                context = data.get("citations", [])
                 
                 # Display Answer
                 message_placeholder.markdown(answer)
@@ -87,9 +87,12 @@ if prompt := st.chat_input("Ask a question about your documents..."):
                 if context:
                     with st.expander("📚 Sources"):
                         for idx, item in enumerate(context):
-                            st.markdown(f"**Source {idx+1}** (Score: {item['score']:.4f})")
-                            st.caption(f"Doc ID: {item.get('doc_id', 'N/A')}")
-                            st.text(item['content'])
+                            st.markdown(
+                                f"**Source {idx+1}** · chunk {item.get('chunk_index', 'N/A')} "
+                                f"· score {item.get('score', 0):.3f}"
+                            )
+                            st.caption(f"Document: {item.get('doc_id', 'N/A')}")
+                            st.text(item.get("content", ""))
                             st.divider()
                 
                 # Add assistant response to history
@@ -104,3 +107,30 @@ if prompt := st.chat_input("Ask a question about your documents..."):
             error_msg = f"Connection Error: {e}"
             message_placeholder.error(error_msg)
             st.session_state.messages.append({"role": "assistant", "content": error_msg})
+
+st.divider()
+with st.container(border=True):
+    st.subheader("🧭 MCP Research Agent")
+    st.caption("Ask the agent to use the project’s Filesystem, Fetch, Git, or Memory tools.")
+    agent_question = st.text_input(
+        "Question for the agent",
+        value="Read rag_foundry_overview.md and tell me which vector database it uses.",
+        key="agent_question",
+    )
+    if st.button("Run MCP agent", type="primary", use_container_width=True):
+        with st.spinner("Agent is selecting and calling tools..."):
+            try:
+                response = requests.post(
+                    f"{API_URL}/agent/ask",
+                    json={"question": agent_question},
+                    timeout=180,
+                )
+                response.raise_for_status()
+                st.session_state["agent_answer"] = response.json().get(
+                    "answer", "No answer returned."
+                )
+            except requests.RequestException as e:
+                st.session_state["agent_answer"] = f"Agent request failed: {e}"
+
+    if st.session_state.get("agent_answer"):
+        st.markdown(st.session_state["agent_answer"])

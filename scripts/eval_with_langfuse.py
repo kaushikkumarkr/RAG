@@ -1,7 +1,12 @@
 import asyncio
 import os
 import json
+from dotenv import load_dotenv
+
+load_dotenv()
+
 from ragas import evaluate
+from ragas.run_config import RunConfig
 from ragas.metrics import faithfulness, answer_relevancy
 from datasets import Dataset
 from langfuse import Langfuse
@@ -22,7 +27,8 @@ llm = ChatOpenAI(
     base_url=start_url,
     api_key="mlx",
     model="mlx-community/Qwen2.5-7B-Instruct-4bit", 
-    temperature=0
+    temperature=0,
+    max_tokens=1024,
 )
 embeddings = HuggingFaceEmbeddings(model_name="all-MiniLM-L6-v2")
 
@@ -75,7 +81,8 @@ async def evaluate_row(question: str, ground_truth: str):
         dataset=dataset,
         metrics=[faithfulness, answer_relevancy],
         llm=llm,
-        embeddings=embeddings
+        embeddings=embeddings,
+        run_config=RunConfig(timeout=180, max_retries=1, max_workers=1, log_tenacity=True),
     )
     
     # 5. Push Scores to trace

@@ -1,3 +1,4 @@
+import asyncio
 from fastapi import FastAPI
 from pydantic import BaseModel
 from contextlib import asynccontextmanager
@@ -48,6 +49,5 @@ class AgentRequest(BaseModel):
 async def ask_agent(request: AgentRequest):
     from rag.agent.runner import AgentRunner
     runner = AgentRunner()
-    answer = runner.run(request.question)
+    answer = await asyncio.to_thread(runner.run, request.question)
     return {"answer": answer}
-
