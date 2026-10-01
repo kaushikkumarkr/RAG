@@ -48,64 +48,43 @@ Git tools; memory can add facts but cannot delete them.
 
 ## 🏗️ System Architecture
 
-```mermaid
-flowchart TB
-    subgraph User Layer
-        UI[Streamlit UI]
-        API[FastAPI]
-    end
+```text
+                         +----------------------+
+                         |     Streamlit UI     |
+                         +----------+-----------+
+                                    |
+                                    v
+                         +----------------------+
+                         |      FastAPI         |
+                         +----+------------+----+
+                              |            |
+                    POST /ask |            | POST /agent/ask
+                              v            v
+                   +----------------+  +------------------+
+                   | Hybrid retrieval|  | ReAct agent      |
+                   | Qdrant + BM25   |  | Local model      |
+                   +-------+--------+  +--------+---------+
+                           |                    |
+                           v                    v
+                   +----------------+  +------------------+
+                   | Cross-encoder  |  | Search and crypto|
+                   | reranker       |  | tools + 4 MCPs   |
+                   +-------+--------+  +--------+---------+
+                           |                    |
+                           v                    |
+                   +----------------+           |
+                   | Qwen2.5 via MLX|           |
+                   +-------+--------+           |
+                           |                    |
+                           +---------+----------+
+                                     |
+                                     v
+                           +------------------+
+                           | Answer returned  |
+                           +------------------+
 
-    subgraph Safety Layer
-        IG[🛡️ Input Guardrails]
-        OG[🛡️ Output Guardrails]
-    end
-
-    subgraph Retrieval Layer
-        HS[🔍 Hybrid Search]
-        QD[(Qdrant)]
-        BM[BM25 Index]
-        RR[🔄 Cross-Encoder<br/>Reranker]
-    end
-
-    subgraph Generation Layer
-        LLM[💬 Local LLM<br/>MLX / Qwen2.5]
-        CIT[📚 Citation<br/>Processor]
-        CONF[📊 Confidence<br/>Scorer]
-    end
-
-    subgraph Observability
-        LF[Langfuse]
-        RAGAS[Ragas Metrics]
-    end
-
-    UI --> API
-    API --> IG
-    IG -->|Blocked| API
-    IG -->|Passed| HS
-    
-    HS --> QD
-    HS --> BM
-    QD --> RR
-    BM --> RR
-    
-    RR --> LLM
-    LLM --> CIT
-    CIT --> CONF
-    CONF --> OG
-    
-    OG -->|Blocked| API
-    OG -->|Passed| API
-    API --> UI
-
-    IG -.->|Spans| LF
-    HS -.->|Spans| LF
-    RR -.->|Spans| LF
-    LLM -.->|Spans| LF
-    CIT -.->|Spans| LF
-    CONF -.->|Scores| LF
-    OG -.->|Spans| LF
-    
-    LF --> RAGAS
+   Langfuse receives traces when configured; the evaluation scripts run Ragas
+   quality metrics and can record their scores there.
 ```
 
 ### Component Overview
